@@ -1,14 +1,19 @@
 # Extract all methods from an RC definition, returning a list of "objects".
 rc_methods <- function(obj) {
-  stopifnot(is(obj, "refClassRepresentation"))
-
-  parents <- obj@refSuperClasses
-  parent_methods <- unlist(lapply(parents, function(x) {
-    getRefClass(x)$methods()
-  }))
-  method_names <- setdiff(ls(envir = obj@refMethods), parent_methods)
-  methods <- mget(method_names, envir = obj@refMethods)
-
+  stopifnot(methods::is(obj, "refClassRepresentation"))
+  allMethods <- obj@refMethods
+  method_names <- objects(allMethods)
+  ## remove callSuper() definitions with a "#" in the name
+  method_names <- method_names[!grepl("#", method_names, fixed=TRUE)]
+  ## select only those from this package
+  if(length(method_names))
+      method_names <- method_names[sapply(method_names,
+                       function(what) {
+                           f <- allMethods[[what]]
+                           is(f, "refMethodDef") &&
+                               packageName(environment(f)) == "roxygen_devtest"
+                                       })]
+  methods <- mget(method_names, envir = allMethods)
   lapply(methods, object)
 }
 
